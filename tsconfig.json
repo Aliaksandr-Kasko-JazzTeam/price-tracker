@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "baseUrl": "./",
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "strictBindCallApply": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "composite": true,
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "references": [
+    { "path": "./libs/shared" },
+    { "path": "./services/api-gateway" },
+    { "path": "./services/auth-service" },
+    { "path": "./services/notification-service" },
+    { "path": "./services/price-checker-agent" },
+    { "path": "./services/price-monitor-scheduler-service"},
+    { "path": "./services/product-service" },
+    { "path": "./services/subscription-service" }
+  ]
+}
