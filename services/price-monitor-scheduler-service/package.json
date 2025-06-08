@@ -8,16 +8,18 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
-    "test": "jest"
+    "start:prod": "node dist/main"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.0.0",
     "@nestjs/core": "^10.0.0",
+    "@nestjs/microservices": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/schedule": "^3.0.0",
-    "@price-tracker/shared": "1.0.0",
+    "@price-tracker/shared": "file:../../libs/shared",
+    "amqp-connection-manager": "^4.1.14",
+    "amqplib": "^0.10.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1"
   },

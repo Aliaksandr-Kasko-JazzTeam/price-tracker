@@ -1,0 +1,225 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: price_tracker
+      MYSQL_USER: pricetracker
+      MYSQL_PASSWORD: pricetracker
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - price-tracker-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p rootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - price-tracker-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: pricetracker
+      RABBITMQ_DEFAULT_PASS: pricetracker
+    networks:
+      - price-tracker-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  shared-lib:
+    build:
+      context: .
+      dockerfile: libs/shared/Dockerfile
+    image: price-tracker-shared-lib
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - price-tracker-network
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+      - SUBSCRIPTION_SERVICE_URL=http://subscription-service:3003
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - shared-lib
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "3000"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - price-tracker-network
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=mysql://pricetracker:pricetracker@mysql:3306/price_tracker
+      - JWT_SECRET=${JWT_SECRET}
+      - SERVICE_SECRET=${SERVICE_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      shared-lib:
+        condition: service_completed_successfully
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - price-tracker-network
+
+  product-service:
+    build:
+      context: .
+      dockerfile: services/product-service/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - DATABASE_URL=mysql://pricetracker:pricetracker@mysql:3306/price_tracker
+      - RABBITMQ_URL=amqp://pricetracker:pricetracker@rabbitmq:5672
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      shared-lib:
+        condition: service_completed_successfully
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - price-tracker-network
+
+  subscription-service:
+    build:
+      context: .
+      dockerfile: services/subscription-service/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+      - DATABASE_URL=mysql://pricetracker:pricetracker@mysql:3306/price_tracker
+      - RABBITMQ_URL=amqp://pricetracker:pricetracker@rabbitmq:5672
+      - BASE_URL=http://api-gateway:3000
+      - SERVICE_SECRET=${SERVICE_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      shared-lib:
+        condition: service_completed_successfully
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - price-tracker-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - RABBITMQ_URL=amqp://pricetracker:pricetracker@rabbitmq:5672
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM=${SMTP_FROM}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      shared-lib:
+        condition: service_completed_successfully
+    networks:
+      - price-tracker-network
+
+  price-checker-agent:
+    build:
+      context: .
+      dockerfile: services/price-checker-agent/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - RABBITMQ_URL=amqp://pricetracker:pricetracker@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      shared-lib:
+        condition: service_completed_successfully
+    networks:
+      - price-tracker-network
+
+  price-monitor-scheduler:
+    build:
+      context: .
+      dockerfile: services/price-monitor-scheduler-service/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=mysql://pricetracker:pricetracker@mysql:3306/price_tracker
+      - RABBITMQ_URL=amqp://pricetracker:pricetracker@rabbitmq:5672
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      shared-lib:
+        condition: service_completed_successfully
+    networks:
+      - price-tracker-network
+
+  ui:
+    build:
+      context: .
+      dockerfile: services/ui/Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+      - APP_API_URL=http://localhost:3000
+    depends_on:
+      - api-gateway
+    networks:
+      - price-tracker-network
+
+networks:
+  price-tracker-network:
+    driver: bridge
+
+volumes:
+  mysql_data:

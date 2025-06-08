@@ -10,7 +10,7 @@
     "prisma:generate": "npx prisma generate",
     "prisma:migrate-dev": "npx prisma migrate dev",
     "prisma:migrate": "npx prisma migrate deploy",
-    "clean": "rimraf dist",
+    "clean": "rimraf dist && rimraf tsconfig.tsbuildinfo",
     "prebuild": "npm run clean"
   },
   "dependencies": {
@@ -20,6 +20,7 @@
     "@nestjs/jwt": "^10.0.0",
     "@nestjs/passport": "^10.0.0",
     "@prisma/client": "^6.8.2",
+    "cheerio": "^1.0.0",
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.1.13",

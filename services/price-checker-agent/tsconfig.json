@@ -20,12 +20,9 @@
     "noFallthroughCasesInSwitch": true,
     "composite": true,
     "paths": {
-      "@price-tracker/shared": ["../../libs/shared/src"]
+      "@price-tracker/shared": ["../../libs/shared/dist"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"],
-  "references": [
-    { "path": "../../libs/shared" }
-  ]
+  "exclude": ["node_modules", "dist"]
 }

@@ -1,6 +1,6 @@
 import {HttpModule} from '@nestjs/axios';
 import {Module} from '@nestjs/common';
-import {ConfigModule} from '@nestjs/config';
+import {ConfigModule, ConfigService} from '@nestjs/config';
 import {JwtStrategy} from '@price-tracker/shared';
 import {AuthController, ProductController, SubscriptionController} from './app.controller';
 import {AppService} from './app.service';
@@ -13,6 +13,13 @@ import {AppService} from './app.service';
     HttpModule,
   ],
   controllers: [AuthController, SubscriptionController, ProductController],
-  providers: [AppService, JwtStrategy],
+  providers: [
+    AppService,
+    {
+      provide: JwtStrategy,
+      useFactory: (configService: ConfigService) => new JwtStrategy(configService),
+      inject: [ConfigService],
+    },
+  ],
 })
 export class AppModule {}

@@ -19,7 +19,7 @@
     "noFallthroughCasesInSwitch": true,
     "composite": true,
     "paths": {
-      "@price-tracker/shared": ["./src"]
+      "@price-tracker/shared": ["dist"]
     }
   },
   "include": ["src/**/*"],

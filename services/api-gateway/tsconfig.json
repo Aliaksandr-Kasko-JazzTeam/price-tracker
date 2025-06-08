@@ -9,6 +9,7 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     "baseUrl": "./",
     "skipLibCheck": true,
     "strictNullChecks": false,
@@ -17,7 +18,7 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@price-tracker/shared": ["../../libs/shared/src"]
+      "@price-tracker/shared": ["../../libs/shared/dist"]
     }
   },
   "include": ["src/**/*"],
