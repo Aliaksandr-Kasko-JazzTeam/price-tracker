@@ -24,7 +24,12 @@ SERVICE_SECRET=your_service_secret
 
 3. Start the services:
 ```bash
-docker compose up -d
+chmod +x run.sh
+./run.sh
+```
+or make sure you set all environment variables in .env and run:
+```bash
+docker compose -p price-tracker up -d
 ```
 
 ## Services

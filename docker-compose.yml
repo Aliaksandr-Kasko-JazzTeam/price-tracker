@@ -177,6 +177,7 @@ services:
     environment:
       - NODE_ENV=production
       - RABBITMQ_URL=amqp://pricetracker:pricetracker@rabbitmq:5672
+      - DATABASE_URL=mysql://pricetracker:pricetracker@mysql:3306/price_tracker
     depends_on:
       rabbitmq:
         condition: service_healthy
