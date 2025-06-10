@@ -37,7 +37,7 @@ export class AuthController {
   @Post('signin')
   @ApiOperation({summary: 'Sign in an existing user'})
   @ApiResponse({
-    status: 200,
+    status: 201,
     description: 'User successfully signed in',
     schema: {
       type: 'object',
@@ -76,7 +76,7 @@ export class SubscriptionController {
   @ApiOperation({summary: 'Get all subscriptions'})
   @ApiBearerAuth()
   @ApiResponse({
-    status: 200,
+    status: 201,
     description: 'List of subscriptions',
     schema: {
       type: 'array',
