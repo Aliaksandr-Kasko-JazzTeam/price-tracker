@@ -1,5 +1,8 @@
 FROM node:20-alpine
 
+ARG MYSQL_HOST
+ENV MYSQL_HOST=${MYSQL_HOST}
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -13,6 +16,7 @@ RUN npm install
 
 RUN npm run prisma:generate
 
-ENV DATABASE_URL=mysql://pricetracker:pricetracker@mysql:3306/price_tracker
+COPY libs/shared/wait-for-db.sh /app/libs/shared/
+RUN chmod +x /app/libs/shared/wait-for-db.sh
 
-CMD ["npm", "run", "prisma:migrate"]
+CMD ["sh", "-c", "/app/libs/shared/wait-for-db.sh && npm run prisma:migrate"]
