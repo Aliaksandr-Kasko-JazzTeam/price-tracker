@@ -39,3 +39,12 @@ docker compose -p price-tracker up -d
 - RabbitMQ Management: http://localhost:15672
   - Username: pricetracker
   - Password: pricetracker
+
+
+## Testing
+
+1. To start e2e tests run
+```bash
+chmod +x run-tests.sh
+./run-tests.sh
+```
