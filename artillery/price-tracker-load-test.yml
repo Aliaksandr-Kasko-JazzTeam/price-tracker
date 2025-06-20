@@ -1,0 +1,57 @@
+config:
+  target: "http://localhost:4001"
+  phases:
+    - duration: 30
+      arrivalRate: 1
+      rampTo: 5
+      name: Warm up
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 10
+      name: Ramp up load
+    - duration: 30
+      arrivalRate: 10
+      rampTo: 30
+      name: Spike
+  plugins:
+    ensure:
+      thresholds:
+        - http.response_time.p95: 500
+        - http.response_time.p99: 1000
+        - http.codes.500 <= 2%
+        - http.codes.400 <= 5%
+        - http.codes.200 >= 90%
+  processor: "./functions.js"
+scenarios:
+  - flow:
+    - function: "generateUserData"
+    - post:
+        url: "/auth/signup"
+        json:
+          name: "{{ name }}"
+          email: "{{ email }}"
+          password: "{{ password }}"
+        capture:
+          json: "$.token"
+          as: token
+        afterResponse: "afterRegister"
+    - function: "chooseProduct"
+    - post:
+        url: "/subscriptions"
+        headers:
+          Authorization: "Bearer {{ token }}"
+        json:
+          url: "{{ productUrl }}"
+        afterResponse: "handleErrorsOnly"
+    - get:
+        url: "/subscriptions"
+        headers:
+          Authorization: "Bearer {{ token }}"
+        afterResponse: "afterGetSubscriptions"
+    - post:
+        url: "/subscriptions/unsubscribe"
+        headers:
+          Authorization: "Bearer {{ token }}"
+        json:
+          productId: "{{ productId }}"
+        afterResponse: "handleErrorsOnly"

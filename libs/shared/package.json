@@ -11,7 +11,8 @@
     "prisma:migrate-dev": "npx prisma migrate dev",
     "prisma:migrate": "npx prisma migrate deploy",
     "clean": "rimraf dist && rimraf tsconfig.tsbuildinfo",
-    "prebuild": "npm run clean"
+    "prebuild": "npm run clean",
+    "warmup:db": "node scripts/warmup-db.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

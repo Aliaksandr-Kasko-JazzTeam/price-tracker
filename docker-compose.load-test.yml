@@ -1,0 +1,188 @@
+services:
+  mysql-test:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: price_tracker_test
+      MYSQL_USER: pricetracker
+      MYSQL_PASSWORD: pricetracker
+    ports:
+      - "3307:3306"
+    networks:
+      - price-tracker-test-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p rootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis-test:
+    image: redis:latest
+    restart: unless-stopped
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 5
+    ports:
+      - "6380:6379"
+    networks:
+      - price-tracker-test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq-test:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 5
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: pricetracker
+      RABBITMQ_DEFAULT_PASS: pricetracker
+    networks:
+      - price-tracker-test-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  shared-lib-test:
+    build:
+      context: .
+      dockerfile: libs/shared/Dockerfile
+    image: price-tracker-shared-lib-test
+    environment:
+      - DATABASE_URL=mysql://pricetracker:pricetracker@mysql-test:3306/price_tracker_test
+      - MYSQL_HOST=mysql-test
+      - LOAD_TEST_WARMUP=true
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+    networks:
+      - price-tracker-test-network
+
+  api-gateway-test:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    ports:
+      - "4001:4001"
+    environment:
+      - NODE_ENV=test
+      - PORT=4001
+      - AUTH_SERVICE_URL=http://auth-service-test:4002
+      - PRODUCT_SERVICE_URL=http://product-service-test:4003
+      - SUBSCRIPTION_SERVICE_URL=http://subscription-service-test:4004
+      - JWT_SECRET=test-secret
+    depends_on:
+      shared-lib-test:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "4001" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - price-tracker-test-network
+
+  auth-service-test:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    environment:
+      - NODE_ENV=test
+      - PORT=4002
+      - DATABASE_URL=mysql://pricetracker:pricetracker@mysql-test:3306/price_tracker_test
+      - JWT_SECRET=test-secret
+      - SERVICE_SECRET=test-service-secret
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      shared-lib-test:
+        condition: service_completed_successfully
+      api-gateway-test:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "4002" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - price-tracker-test-network
+
+  product-service-test:
+    build:
+      context: .
+      dockerfile: services/product-service/Dockerfile
+    environment:
+      - NODE_ENV=test
+      - PORT=4003
+      - DATABASE_URL=mysql://pricetracker:pricetracker@mysql-test:3306/price_tracker_test
+      - RABBITMQ_URL=amqp://pricetracker:pricetracker@rabbitmq-test:5672
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      - JWT_SECRET=test-secret
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      rabbitmq-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      shared-lib-test:
+        condition: service_completed_successfully
+      api-gateway-test:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "4003" ]
+      interval: 5s
+      timeout: 5s
+      retries:
+        20
+    networks:
+      - price-tracker-test-network
+
+  subscription-service-test:
+    build:
+      context: .
+      dockerfile: services/subscription-service/Dockerfile
+    environment:
+      - NODE_ENV=test
+      - PORT=4004
+      - DATABASE_URL=mysql://pricetracker:pricetracker@mysql-test:3306/price_tracker_test
+      - RABBITMQ_URL=amqp://pricetracker:pricetracker@rabbitmq-test:5672
+      - BASE_URL=http://api-gateway-test:4001
+      - SERVICE_SECRET=test-service-secret
+      - JWT_SECRET=test-secret
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      rabbitmq-test:
+        condition: service_healthy
+      auth-service-test:
+        condition: service_healthy
+      shared-lib-test:
+        condition: service_completed_successfully
+      api-gateway-test:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "4004" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - price-tracker-test-network
+
+networks:
+  price-tracker-test-network:
+    driver: bridge

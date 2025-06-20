@@ -19,4 +19,8 @@ RUN npm run prisma:generate
 COPY libs/shared/wait-for-db.sh /app/libs/shared/
 RUN chmod +x /app/libs/shared/wait-for-db.sh
 
-CMD ["sh", "-c", "/app/libs/shared/wait-for-db.sh && npm run prisma:migrate"]
+CMD sh -c "/app/libs/shared/wait-for-db.sh \
+    && npm run prisma:migrate \
+    && if [ \"$LOAD_TEST_WARMUP\" = \"true\" ]; then \
+        npm run warmup:db; \
+    fi"
